@@ -1,6 +1,6 @@
 import cloneDeep from "./cloneDeep.js"
 
-function createRef(initialValue, maxHistory = 5) {
+function base(initialValue, maxHistory = 5) {
   const state = {
     value: cloneDeep(initialValue),
     listeners: new Map(),
@@ -74,7 +74,9 @@ function createRef(initialValue, maxHistory = 5) {
     const keys = path.split(".").map((key) => key.trim());
     let current = obj;
     for (const key of keys) {
-      if (current === undefined || current === null) throw new Error(`Path '${path}' invalid.`);
+      if (current === undefined || current === null) {
+      	throw new Error(`Path '${path}' invalid.`);
+      }
       if (Array.isArray(current) && !/^\d+$/.test(key)) throw new Error(`'${key}' bukan indeks array.`);
       if (Array.isArray(current)) current = current[Number(key)];
       else if (Object.prototype.hasOwnProperty.call(current, key)) current = current[key];
@@ -95,12 +97,17 @@ function createRef(initialValue, maxHistory = 5) {
   }
 
   function saveHistory() {
-    if (state.history.length >= maxHistory) state.history.shift();
+    if (state.history.length >= maxHistory) { state.history.shift();
+    }
     state.history.push(cloneDeep(state.value));
   }
 
   function getReactiveValue(val) {
-    return typeof val === "object" && val !== null ? new Proxy(val, proxyHandler) : val;
+    if(typeof val === "object" && val !== null) {
+    	return new proxy(val, proxyHandler)
+    } else {
+    	return val
+    }
   }
 
   function convertValue(newValue) {
@@ -227,6 +234,55 @@ function createRef(initialValue, maxHistory = 5) {
   };
 }
 
-let ref = createRef
+function wrapRef(refObj) {
+  return new Proxy(refObj, {
+    get(target, prop, receiver) {
+      if (prop in target) return Reflect.get(target, prop, receiver);
+      const val = target.value ?? {};
+      return val[prop];
+    },
+    set(target, prop, value, receiver) {
+      if (prop in target) return Reflect.set(target, prop, value, receiver);
+      const val = target.value ?? {};
+      val[prop] = value;
+      return true;
+    },
+    deleteProperty(target, prop) {
+      if (prop in target) return delete target[prop];
+      const val = target.value ?? {};
+      delete val[prop];
+      return true;
+    },
+    has(target, prop) {
+      const val = target.value ?? {};
+      return prop in target || prop in val;
+    },
+    ownKeys(target) {
+      const val = target.value ?? {};
+      return Array.from(new Set([...Reflect.ownKeys(target), ...Reflect.ownKeys(val)]));
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop in target) {
+        return Object.getOwnPropertyDescriptor(target, prop);
+      }
+      const val = target.value ?? {};
+      const desc = Object.getOwnPropertyDescriptor(val, prop);
+      if (desc) return desc;
+      // fallback default
+      return {
+        configurable: true,
+        enumerable: true,
+        value: undefined,
+        writable: true,
+      };
+    }
+  });
+}
 
-export { ref, createRef }
+function ref(initialValue, maxHistory = 5) {
+  return wrapRef(base(initialValue, maxHistory));
+}
+
+let createRef = base
+
+export { ref, createRef };

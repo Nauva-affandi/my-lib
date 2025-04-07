@@ -58,6 +58,3 @@ state.runWatch("watcherId");  // ID tertentu
 // mode silent (gak trigger watch)
 state.silent.value = { count: 99, user: { name: "xxx" } };
 state.silent.set({ count: 123 });
-
-// ekspor
-export { ref, createRef };

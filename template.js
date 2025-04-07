@@ -1,8 +1,10 @@
 export default class template {
-  constructor(el) {
+  constructor(el, ...refs) {
     this.el = this.resolveElement(el);
     if (!this.el) throw new Error(`Elemen "${el}" tidak ditemukan!`);
     this.scopeId = `data-${Math.random().toString(36).substr(2, 9)}`;
+    this.refs = Array.isArray(refs[0]) ? refs[0] : refs;
+    this.reactiveKeys = new Set();
     this.init();
   }
 
@@ -10,6 +12,57 @@ export default class template {
     return /^[\w-]+$/.test(selector)
       ? document.getElementById(selector)
       : document.querySelector(selector);
+  }
+
+  css() {
+    return "";
+  }
+
+  styleUrl() {
+    return "";
+  }
+
+  template() {
+    return "";
+  }
+
+  script() {}
+
+  async scriptUrl() {
+    return "";
+  }
+
+  bindReactive() {
+    const templateText = this.template();
+    if (!templateText.includes("{{")) return;
+
+    const regex = /{{\s*([\w$.]+)\s*}}/g;
+    let match;
+    while ((match = regex.exec(templateText))) {
+      this.reactiveKeys.add(match[1]);
+    }
+
+    this.reactiveKeys.forEach((keyPath) => {
+      this.refs.forEach((ref) => {
+        ref.watch(keyPath, () => this.render()).once(Infinity);
+      });
+    });
+  }
+
+  render() {
+    let tmpl = this.template();
+
+    tmpl = tmpl.replace(/{{\s*([\w$.]+)\s*}}/g, (_, key) => {
+      for (let ref of this.refs) {
+        try {
+          const val = key.split(".").reduce((acc, k) => acc?.[k], ref.value);
+          if (val !== undefined) return val;
+        } catch {}
+      }
+      return "";
+    });
+
+    this.el.innerHTML = tmpl.replace(/<(\w+)/g, `<$1 ${this.scopeId}`);
   }
 
   async style() {
@@ -30,24 +83,6 @@ export default class template {
     }
   }
 
-  css() {
-    return ""; // Bisa di-override
-  }
-
-  styleUrl() {
-    return ""; // Bisa di-override
-  }
-
-  template() {
-    return ""; // Bisa di-override
-  }
-
-  script() {} // Bisa di-override
-
-  async scriptUrl() {
-    return ""; // Bisa di-override
-  }
-
   async loadScript() {
     const url = await this.scriptUrl();
     if (url) {
@@ -58,23 +93,18 @@ export default class template {
     }
   }
 
-  render() {
-    const tmpl = this.template();
-    if (tmpl) this.el.innerHTML = tmpl.replace(/<(\w+)/g, `<$1 ${this.scopeId}`);
-  }
-
   async init() {
     this.render();
     await this.style();
+    this.bindReactive();
     this.script();
     await this.loadScript();
   }
 
-  static mount(el) {
-    return new this(el);
+  static mount(el, ...refs) {
+    return new this(el, ...refs);
   }
 
-  // **Fitur Baru: Dapatkan Template dan CSS Tanpa Instansiasi**
   static get template() {
     return new this(document.createElement("div")).template();
   }
@@ -82,8 +112,8 @@ export default class template {
   static get style() {
     return new this(document.createElement("div")).css();
   }
-  
+
   static get script() {
-	  return new this(document.createElement("div")).script.toString();
-	}
+    return new this(document.createElement("div")).script.toString();
+  }
 }
