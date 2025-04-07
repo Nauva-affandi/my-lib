@@ -1,0 +1,22 @@
+export default class createBus {
+  constructor() {
+    this.events = {};
+  }
+
+  on(event, callback) {
+    if (!this.events[event]) this.events[event] = [];
+    this.events[event].push(callback);
+  }
+
+  emit(event, data) {
+    if (this.events[event]) {
+      this.events[event].forEach((callback) => callback(data));
+    }
+  }
+
+  off(event) {
+    if (this.events[event]) {
+      delete this.events[event];
+    }
+  }
+}
