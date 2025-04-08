@@ -284,5 +284,5 @@ function ref(initialValue, maxHistory = 5) {
 }
 
 let createRef = base
-
-export { ref, createRef };
+export default createRef
+export { ref };
