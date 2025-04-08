@@ -1,0 +1,20 @@
+{
+  "name": "nofandi-mini",
+  "version": "1.0.0",
+  "description": "lib sederhana dan mini fitur utama di createRef & createRouter",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nauva-affandi/my-lib.git"
+  },
+  "keywords": [],
+  "author": "Nauva affandi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Nauva-affandi/my-lib/issues"
+  },
+  "homepage": "https://github.com/Nauva-affandi/my-lib#readme"
+}

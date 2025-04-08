@@ -1,4 +1,4 @@
-export default function createElement(f, options) {
+export function createElement(f, options) {
   let t = typeof f == "string" ? document.querySelector(f) : f;
   if (!t) return console.error("Parent element not found!");
 

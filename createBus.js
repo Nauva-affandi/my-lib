@@ -1,4 +1,4 @@
-export default class createBus {
+export class createBus {
   constructor() {
     this.events = {};
   }

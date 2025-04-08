@@ -1,4 +1,4 @@
-export default function watchs(refs, watchId, callback) {
+export function watchs(refs, watchId, callback) {
   const watchers = refs.map(ref => ref.watch(callback).id(watchId));
   const chainMethods = {
     throttle(ms) {

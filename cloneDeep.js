@@ -1,4 +1,4 @@
-export default function cloneDeep(value) {
+export function cloneDeep(value) {
   if (value === null || typeof value !== "object") {
     return value;
   }

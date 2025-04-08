@@ -1,4 +1,4 @@
-export default class EventMaker {
+export class eventMaker {
   constructor(parentSelector) {
     this.parent = document.querySelector(parentSelector);
     if (!this.parent) {

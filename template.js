@@ -1,4 +1,4 @@
-export default class template {
+export class template {
   constructor(el, ...refs) {
     this.el = this.resolveElement(el);
     if (!this.el) throw new Error(`Elemen "${el}" tidak ditemukan!`);

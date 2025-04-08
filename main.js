@@ -1,4 +1,682 @@
-import {spinner} from " ./spinner.js"
+export function cloneDeep(value) {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(cloneDeep);
+  }
+  if (value instanceof Date) {
+    return new Date(value.getTime());
+  }
+  if (value instanceof RegExp) {
+    return new RegExp(value.source, value.flags);
+  }
+  const clonedObj = {};
+  for (const key in value) {
+    if (value.hasOwnProperty(key)) {
+      clonedObj[key] = cloneDeep(value[key]);
+    }
+  }
+  return clonedObj;
+}
+
+export class createBus {
+  constructor() {
+    this.events = {};
+  }
+
+  on(event, callback) {
+    if (!this.events[event]) this.events[event] = [];
+    this.events[event].push(callback);
+  }
+
+  emit(event, data) {
+    if (this.events[event]) {
+      this.events[event].forEach((callback) => callback(data));
+    }
+  }
+
+  off(event) {
+    if (this.events[event]) {
+      delete this.events[event];
+    }
+  }
+}
+
+export function createElement(f, options) {
+  let t = typeof f == "string" ? document.querySelector(f) : f;
+  if (!t) return console.error("Parent element not found!");
+
+  let element;
+  if (options.clone) {
+    let r = document.querySelector(options.clone);
+    if (!r) return console.error("Element to clone not found!");
+    element = r.cloneNode(true);
+  } else {
+    element = document.createElement(options.tag || "div");
+  }
+
+  if (options.html) {
+    element.innerHTML = options.html;
+  } else if (options.text) {
+    element.textContent = options.text;
+  }
+
+  if (options.attrs) {
+    for (let r in options.attrs) {
+      if (r === "class") {
+        options.classMode === "replace"
+          ? (element.className = options.attrs[r])
+          : element.classList.add(...options.attrs[r].split(" "));
+      } else {
+        element.setAttribute(r, options.attrs[r]);
+      }
+    }
+  }
+
+  if (options.id) element.id = options.id;
+  if (options.class) element.className = options.class;
+  if (options.toggleClass) element.classList.toggle(options.toggleClass);
+
+  if (options.dataset) {
+    for (let r in options.dataset) {
+      element.dataset[r] = options.dataset[r];
+    }
+  }
+
+  if (options.style) {
+    for (let r in options.style) {
+      element.style[r] = options.style[r];
+    }
+  }
+
+  if (options.events) {
+    for (let r in options.events) {
+      element.addEventListener(r, options.events[r]);
+    }
+  }
+
+  if (options.children) {
+    options.children.forEach((r) => n(element, r));
+  }
+
+  if (options.callback) options.callback(element);
+  
+  if (options.replaceWith) {
+    let r = document.querySelector(f);
+    if (r) r.replaceWith(element);
+  }
+
+  let a = () => {
+    if (options.replace) {
+      t.innerHTML = "";
+      t.appendChild(element);
+    } else if (options.insertBefore) {
+      let r = document.querySelector(options.insertBefore);
+      r ? t.insertBefore(element, r) : console.warn("Reference element for insertBefore not found!");
+    } else if (options.insertAfter) {
+      let r = document.querySelector(options.insertAfter);
+      r && r.parentNode
+        ? r.parentNode.insertBefore(element, r.nextSibling)
+        : console.warn("Reference element for insertAfter not found!");
+    } else if (options.insertInto) {
+      let r = document.querySelector(options.insertInto);
+      r ? r.appendChild(element) : console.warn("Reference element for insertInto not found!");
+    } else if (options.moveTo) {
+      let r = document.querySelector(options.moveTo);
+      r ? t.appendChild(r) : console.warn("Element to move not found!");
+    } else if (options.prepend) {
+      t.prepend(element);
+    } else {
+      t.appendChild(element);
+    }
+
+    if (options.unwrap) {
+      let r = t.parentNode;
+      if (r) {
+        while (t.firstChild) {
+          r.insertBefore(t.firstChild, t);
+        }
+        t.remove();
+      }
+    }
+
+    if (options.removeAfter) {
+      setTimeout(() => element.remove(), options.removeAfter);
+    }
+  };
+
+  if (options.waitBeforeAppend) {
+    setTimeout(a, options.waitBeforeAppend);
+  } else {
+    a();
+  }
+}
+
+export class eventMaker {
+  constructor(parentSelector) {
+    this.parent = document.querySelector(parentSelector);
+    if (!this.parent) {
+      throw new Error(`Parent "${parentSelector}" tidak ditemukan!`);
+    }
+    this.events = {};
+    this.intervals = {};
+  }
+
+  on(eventType, childSelector, callback) {
+    if (!this.events[eventType]) {
+      this.events[eventType] = {};
+    }
+
+    if (!this.events[eventType][childSelector]) {
+      this.events[eventType][childSelector] = [];
+    }
+
+    this.events[eventType][childSelector].push(callback);
+    
+    if (!document.querySelector(childSelector)) {
+      this.checkElementExists(eventType, childSelector);
+    } else {
+      this.addEventListener(eventType, childSelector);
+    }
+  }
+
+  checkElementExists(eventType, childSelector) {
+    if (this.intervals[childSelector]) {
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 40;
+    const intervalMs = 1500;
+
+    this.intervals[childSelector] = setInterval(() => {
+      if (document.querySelector(childSelector)) {
+        clearInterval(this.intervals[childSelector]);
+        delete this.intervals[childSelector];
+        this.addEventListener(eventType, childSelector);
+      } else if (++attempts >= maxAttempts) {
+        clearInterval(this.intervals[childSelector]);
+        delete this.intervals[childSelector];
+      }
+    }, intervalMs);
+  }
+
+  addEventListener(eventType, childSelector) {
+    if (!this.events[eventType]?.[childSelector]) {
+      return;
+    }
+
+    const handler = (event) => {
+      const target = event.target.closest(childSelector);
+      if (target && this.parent.contains(target)) {
+        this.events[eventType][childSelector].forEach(callback =>
+          callback(event, target)
+        );
+      }
+    };
+
+    this.events[eventType][childSelector].handler = handler;
+    this.parent.addEventListener(eventType, handler);
+  }
+
+  off(eventType, childSelector) {
+    if (!this.events[eventType]?.[childSelector]) {
+      return;
+    }
+
+    this.parent.removeEventListener(
+      eventType,
+      this.events[eventType][childSelector].handler
+    );
+    
+    delete this.events[eventType][childSelector];
+    if (Object.keys(this.events[eventType]).length === 0) {
+      delete this.events[eventType];
+    }
+  }
+}
+
+export function createRef(initialValue, maxHistory = 5) {
+  const state = {
+    value: cloneDeep(initialValue),
+    listeners: new Map(),
+    history: [],
+    initialClone: cloneDeep(initialValue),
+    watchActiveMap: new Map(),
+    defaultWatchId: "main",
+    batching: false,
+    batchQueued: false,
+  };
+
+  const proxyHandler = {
+    set: (target, prop, newValue) => {
+      if (target[prop] !== newValue) {
+        target[prop] = newValue;
+        if (!state.batching) notify();
+        else state.batchQueued = true;
+      }
+      return true;
+    },
+  };
+
+  function notify() {
+    if (state.batchQueued) {
+      state.batchQueued = false;
+    } else {
+      return;
+    }
+
+    state.listeners.forEach((listeners, watchId) => {
+      if (state.watchActiveMap.get(watchId) === false) return;
+      listeners.forEach(({ handler, config }) => {
+        executeHandler(handler, config, state.value);
+      });
+    });
+  }
+
+  function executeHandler(handler, config, newValue) {
+    const now = Date.now();
+    if (config.throttleTime > 0 && now - config.lastCalled < config.throttleTime) return;
+    config.lastCalled = now;
+
+    let valueToPass = config.trackPath ? getNestedValue(newValue, config.trackPath) : newValue;
+    let oldValueToPass = config.trackPath ? getNestedValue(config.lastValue, config.trackPath) : config.lastValue;
+
+    const runHandler = () => {
+      if (config.callCount >= config.maxCalls) {
+        removeListener(handler);
+        return;
+      }
+      try {
+        handler(valueToPass, oldValueToPass);
+        config.callCount++;
+        if (config.callCount >= config.maxCalls) removeListener(handler);
+      } catch (error) {
+        console.error(error.message);
+      }
+      config.lastValue = cloneDeep(newValue);
+    };
+
+    if (config.delayTime > 0) {
+      clearTimeout(config.timeout);
+      config.timeout = setTimeout(runHandler, config.delayTime);
+    } else {
+      runHandler();
+    }
+  }
+
+  function getNestedValue(obj, path) {
+    if (typeof path !== "string") throw new Error("Path harus string.");
+    const keys = path.split(".").map((key) => key.trim());
+    let current = obj;
+    for (const key of keys) {
+      if (current === undefined || current === null) {
+      	throw new Error(`Path '${path}' invalid.`);
+      }
+      if (Array.isArray(current) && !/^\d+$/.test(key)) throw new Error(`'${key}' bukan indeks array.`);
+      if (Array.isArray(current)) current = current[Number(key)];
+      else if (Object.prototype.hasOwnProperty.call(current, key)) current = current[key];
+      else throw new Error(`Properti '${key}' tidak ditemukan.`);
+    }
+    return current;
+  }
+
+  function removeListener(handler, watchId) {
+    if (!state.listeners.has(watchId)) return;
+    const listeners = state.listeners.get(watchId).filter((l) => l.handler !== handler);
+    if (listeners.length === 0) {
+      state.listeners.delete(watchId);
+      state.watchActiveMap.delete(watchId);
+    } else {
+      state.listeners.set(watchId, listeners);
+    }
+  }
+
+  function saveHistory() {
+    if (state.history.length >= maxHistory) { state.history.shift();
+    }
+    state.history.push(cloneDeep(state.value));
+  }
+
+  function getReactiveValue(val) {
+    if(typeof val === "object" && val !== null) {
+    	return new proxy(val, proxyHandler)
+    } else {
+    	return val
+    }
+  }
+
+  function convertValue(newValue) {
+    return getReactiveValue(cloneDeep(newValue));
+  }
+
+  function update(action, silent = false) {
+    saveHistory();
+    action();
+    if (!silent && !state.batching) notify();
+    else state.batchQueued = true;
+  }
+
+  function method(silent = false) {
+    return {
+      get value() {
+        return state.value;
+      },
+      set value(newValue) {
+        update(() => (state.value = convertValue(newValue)), silent);
+      },
+      set(newValue) {
+        update(() => (state.value = convertValue(newValue)), silent);
+      },
+      undo() {
+        update(() => {
+          if (state.history.length > 0) state.value = getReactiveValue(state.history.pop());
+        }, silent);
+      },
+      reset() {
+        update(() => (state.value = getReactiveValue(clone(state.initialClone))), silent);
+      },
+      unwatch(watchId) {
+        state.watchActiveMap.set(watchId || state.defaultWatchId, false);
+        return this;
+      },
+      jalankanWatch(watchId) {
+        state.watchActiveMap.set(watchId || state.defaultWatchId, true);
+        return this;
+      },
+      batch(fn) {
+        state.batching = true;
+        fn();
+        state.batching = false;
+        if (state.batchQueued) notify();
+      }
+    };
+  }
+
+  function watch(target, callback = null) {
+    let cb = callback || target;
+    let trackPath = callback ? target : null;
+    let watchId = state.defaultWatchId;
+
+    const config = {
+      trackPath,
+      throttleTime: 0,
+      delayTime: 0,
+      lastCalled: 0,
+      timeout: null,
+      callCount: 0,
+      maxCalls: 1,
+      lastValue: cloneDeep(state.value),
+      watchId
+    };
+
+    function handler(newValue, oldValue) {
+      cb(newValue, oldValue);
+    }
+
+    if (!state.watchActiveMap.has(watchId)) state.watchActiveMap.set(watchId, true);
+    if (!state.listeners.has(watchId)) state.listeners.set(watchId, []);
+    state.listeners.get(watchId).push({ handler, config });
+
+    const methods = {
+      id(newId) {
+        removeListener(handler, watchId);
+        watchId = newId;
+        config.watchId = newId;
+        if (!state.watchActiveMap.has(watchId)) state.watchActiveMap.set(watchId, true);
+        if (!state.listeners.has(watchId)) state.listeners.set(watchId, []);
+        state.listeners.get(watchId).push({ handler, config });
+        return methods;
+      },
+      throttle(ms) {
+        config.throttleTime = ms;
+        return methods;
+      },
+      delay(ms) {
+        config.delayTime = ms;
+        return methods;
+      },
+      once(count = 1) {
+        config.maxCalls = count;
+        return methods;
+      },
+      useEffect() {
+        if (state.watchActiveMap.get(watchId) !== false) {
+          executeHandler(handler, config, state.value);
+        }
+        return methods;
+      },
+      unwatch() {
+        removeListener(handler, watchId);
+        return methods;
+      }
+    };
+
+    return methods;
+  }
+
+  return {
+    ...method(),
+    silent: method(true),
+    watch,
+    unwatch(watchId) {
+      state.watchActiveMap.set(watchId || state.defaultWatchId, false);
+      return this;
+    },
+    runWatch(watchId) {
+      state.watchActiveMap.set(watchId || state.defaultWatchId, true);
+      return this;
+    }
+  };
+}
+
+function wrapRef(refObj) {
+  return new Proxy(refObj, {
+    get(target, prop, receiver) {
+      if (prop in target) return Reflect.get(target, prop, receiver);
+      const val = target.value ?? {};
+      return val[prop];
+    },
+    set(target, prop, value, receiver) {
+      if (prop in target) return Reflect.set(target, prop, value, receiver);
+      const val = target.value ?? {};
+      val[prop] = value;
+      return true;
+    },
+    deleteProperty(target, prop) {
+      if (prop in target) return delete target[prop];
+      const val = target.value ?? {};
+      delete val[prop];
+      return true;
+    },
+    has(target, prop) {
+      const val = target.value ?? {};
+      return prop in target || prop in val;
+    },
+    ownKeys(target) {
+      const val = target.value ?? {};
+      return Array.from(new Set([...Reflect.ownKeys(target), ...Reflect.ownKeys(val)]));
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop in target) {
+        return Object.getOwnPropertyDescriptor(target, prop);
+      }
+      const val = target.value ?? {};
+      const desc = Object.getOwnPropertyDescriptor(val, prop);
+      if (desc) return desc;
+      // fallback default
+      return {
+        configurable: true,
+        enumerable: true,
+        value: undefined,
+        writable: true,
+      };
+    }
+  });
+}
+
+export function ref(initialValue, maxHistory = 5) {
+	return wrapRef(createRef(initialValue, maxHistory))
+}
+
+export function watchs(refs, watchId, callback) {
+  const watchers = refs.map(ref => ref.watch(callback).id(watchId));
+  const chainMethods = {
+    throttle(ms) {
+      watchers.forEach(w => w.throttle(ms));
+      return chainMethods;
+    },
+    delay(ms) {
+      watchers.forEach(w => w.delay(ms));
+      return chainMethods;
+    },
+    once(count = 1) {
+      watchers.forEach(w => w.once(count));
+      return chainMethods;
+    },
+    useEffect() {
+      watchers.forEach(w => w.useEffect());
+      return chainMethods;
+    },
+    unwatch() {
+      watchers.forEach(w => w.unwatch());
+      return chainMethods;
+    }
+  };
+  return chainMethods;
+}
+
+export class template {
+  constructor(el, ...refs) {
+    this.el = this.resolveElement(el);
+    if (!this.el) throw new Error(`Elemen "${el}" tidak ditemukan!`);
+    this.scopeId = `data-${Math.random().toString(36).substr(2, 9)}`;
+    this.refs = Array.isArray(refs[0]) ? refs[0] : refs;
+    this.reactiveKeys = new Set();
+    this.init();
+  }
+
+  resolveElement(selector) {
+    return /^[\w-]+$/.test(selector)
+      ? document.getElementById(selector)
+      : document.querySelector(selector);
+  }
+
+  css() {
+    return "";
+  }
+
+  styleUrl() {
+    return "";
+  }
+
+  template() {
+    return "";
+  }
+
+  script() {}
+
+  async scriptUrl() {
+    return "";
+  }
+
+  bindReactive() {
+    const templateText = this.template();
+    if (!templateText.includes("{{")) return;
+
+    const regex = /{{\s*([\w$.]+)\s*}}/g;
+    let match;
+    while ((match = regex.exec(templateText))) {
+      this.reactiveKeys.add(match[1]);
+    }
+
+    this.reactiveKeys.forEach((keyPath) => {
+      this.refs.forEach((ref) => {
+        ref.watch(keyPath, () => this.render()).once(Infinity);
+      });
+    });
+  }
+
+  render() {
+    let tmpl = this.template();
+
+    tmpl = tmpl.replace(/{{\s*([\w$.]+)\s*}}/g, (_, key) => {
+      for (let ref of this.refs) {
+        try {
+          const val = key.split(".").reduce((acc, k) => acc?.[k], ref.value);
+          if (val !== undefined) return val;
+        } catch {}
+      }
+      return "";
+    });
+
+    this.el.innerHTML = tmpl.replace(/<(\w+)/g, `<$1 ${this.scopeId}`);
+  }
+
+  async style() {
+    const css = this.css();
+    if (css) {
+      const scopedCss = css.replace(/([^{}]+){/g, `[${this.scopeId}] $1 {`);
+      const styleTag = document.createElement("style");
+      styleTag.textContent = scopedCss;
+      document.head.appendChild(styleTag);
+    }
+
+    const url = this.styleUrl();
+    if (url) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = url;
+      document.head.appendChild(link);
+    }
+  }
+
+  async loadScript() {
+    const url = await this.scriptUrl();
+    if (url) {
+      const script = document.createElement("script");
+      script.src = url;
+      document.body.appendChild(script);
+      await new Promise((resolve) => (script.onload = resolve));
+    }
+  }
+
+  async init() {
+    this.render();
+    await this.style();
+    this.bindReactive();
+    this.script();
+    await this.loadScript();
+  }
+
+  static mount(el, ...refs) {
+    return new this(el, ...refs);
+  }
+
+  static get template() {
+    return new this(document.createElement("div")).template();
+  }
+
+  static get style() {
+    return new this(document.createElement("div")).css();
+  }
+
+  static get script() {
+    return new this(document.createElement("div")).script.toString();
+  }
+}
+
+export function spinner({ size = "md", w = "8" } = {}) {
+	return `
+		<div>
+			<style>
+				@import url("https://cdn.jsdelivr.net/combine/npm/daisyui@5/base/scrollbar.css,npm/daisyui@5/base/svg.css,npm/daisyui@5/base/reset.css,npm/daisyui@5/base/rootscrollgutter.css,npm/daisyui@5/base/rootcolor.css,npm/daisyui@5/base/properties.css,npm/daisyui@5/base/rootscrolllock.css,npm/daisyui@5/components/loading.css");
+			</style>
+			<span class="loading loading-spinner loading-${size} w-${w}"></span>
+		</div>
+	`
+}
 
 export class router {
   constructor(options) {
@@ -292,7 +970,7 @@ export class router {
       };
     }
   }
-
+  
   handleTransition(route, ctx) {
     try {
       ctx.transition = {
@@ -683,7 +1361,7 @@ export class router {
   }
 }
 
-export default function createRouter(options) {
+export function createRouter(options) {
   try {
     return new router(options);
   } catch (err) {
@@ -691,4 +1369,3 @@ export default function createRouter(options) {
     return null;
   }
 };
-  

@@ -1,4 +1,4 @@
-export default function spinner({ size = "md", w = "8" } = {}) {
+export function spinner({ size = "md", w = "8" } = {}) {
 	return `
 		<div>
 			<style>

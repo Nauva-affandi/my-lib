@@ -1,4 +1,4 @@
-import cloneDeep from "./cloneDeep.js"
+import {cloneDeep} from "./cloneDeep.js"
 
 function base(initialValue, maxHistory = 5) {
   const state = {
@@ -284,5 +284,4 @@ function ref(initialValue, maxHistory = 5) {
 }
 
 let createRef = base
-export default createRef
-export { ref };
+export { ref, createRef };
