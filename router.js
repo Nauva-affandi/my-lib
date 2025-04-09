@@ -1,4 +1,4 @@
-import { spinner } from ' ./spinner.js'
+import { spinner } from './spinner.js'
 
 export class router {
   constructor(options) {
