@@ -683,7 +683,7 @@ export class router {
   }
 }
 
-export default function createRouter(options) {
+export function createRouter(options) {
   try {
     return new router(options);
   } catch (err) {
