@@ -2,10 +2,10 @@ import { cloneDeep } from './cloneDeep.js'
 
 function base(initialValue, maxHistory = 5) {
   const state = {
-    value: cloneDeep(initialValue),
+    value: convertValue(initialValue),
     listeners: new Map(),
     history: [],
-    initialClone: cloneDeep(initialValue),
+    initialClone: convertValue(initialValue),
     watchActiveMap: new Map(),
     defaultWatchId: 'main',
     batching: false,
@@ -105,7 +105,7 @@ function base(initialValue, maxHistory = 5) {
 
   function getReactiveValue(val) {
     if (typeof val === 'object' && val !== null) {
-      return new proxy(val, proxyHandler)
+      return new Proxy(val, proxyHandler)
     } else {
       return val
     }
