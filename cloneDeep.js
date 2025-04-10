@@ -11,11 +11,11 @@ export function cloneDeep(value) {
   if (value instanceof RegExp) {
     return new RegExp(value.source, value.flags);
   }
-  const clonedObj = {};
+  const result = {};
   for (const key in value) {
     if (value.hasOwnProperty(key)) {
-      clonedObj[key] = cloneDeep(value[key]);
+      result[key] = cloneDeep(value[key]);
     }
   }
-  return clonedObj;
+  return result
 }

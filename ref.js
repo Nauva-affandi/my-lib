@@ -103,24 +103,41 @@ function base(initialValue, maxHistory = 5) {
     state.history.push(cloneDeep(state.value))
   }
 
-  function getReactiveValue(val) {
-    if (typeof val === 'object' && val !== null) {
-      return new Proxy(val, proxyHandler)
-    } else {
-      return val
-    }
-  }
+  function getReactiveValue(value) {
+	  if (typeof value !== 'object' || value === null) return value
+	
+	  const proxy = new Proxy(value, proxyHandler)
+	  for (const key in value) {
+	    if (typeof value[key] === 'object' && value[key] !== null) {
+	      value[key] = getReactiveValue(value[key]) // rekursif
+	    }
+	  }
+	  return proxy
+	}
 
   function convertValue(newValue) {
     return getReactiveValue(cloneDeep(newValue))
   }
 
-  function update(action, silent = false) {
-    saveHistory()
-    action()
-    if (!silent && !state.batching) notify()
-    else state.batchQueued = true
-  }
+//	 function update(action, silent = false) {
+//     saveHistory()
+//     action()
+//     if (!silent && !state.batching) notify()
+//     else state.batchQueued = true
+//   }
+
+	function update(action, silent = false) {
+	  saveHistory()
+	  action()
+	  if (!silent) {
+	    if (!state.batching) {
+	      state.batchQueued = true
+	      notify()
+	    } else {
+	      state.batchQueued = true
+	    }
+	  }
+	}
 
   function method(silent = false) {
     return {
@@ -235,54 +252,4 @@ function base(initialValue, maxHistory = 5) {
   }
 }
 
-function wrapRef(refObj) {
-  return new Proxy(refObj, {
-    get(target, prop, receiver) {
-      if (prop in target) return Reflect.get(target, prop, receiver)
-      const val = target.value ?? {}
-      return val[prop]
-    },
-    set(target, prop, value, receiver) {
-      if (prop in target) return Reflect.set(target, prop, value, receiver)
-      const val = target.value ?? {}
-      val[prop] = value
-      return true
-    },
-    deleteProperty(target, prop) {
-      if (prop in target) return delete target[prop]
-      const val = target.value ?? {}
-      delete val[prop]
-      return true
-    },
-    has(target, prop) {
-      const val = target.value ?? {}
-      return prop in target || prop in val
-    },
-    ownKeys(target) {
-      const val = target.value ?? {}
-      return Array.from(new Set([...Reflect.ownKeys(target), ...Reflect.ownKeys(val)]))
-    },
-    getOwnPropertyDescriptor(target, prop) {
-      if (prop in target) {
-        return Object.getOwnPropertyDescriptor(target, prop)
-      }
-      const val = target.value ?? {}
-      const desc = Object.getOwnPropertyDescriptor(val, prop)
-      if (desc) return desc
-      // fallback default
-      return {
-        configurable: true,
-        enumerable: true,
-        value: undefined,
-        writable: true,
-      }
-    },
-  })
-}
-
-function ref(initialValue, maxHistory = 5) {
-  return wrapRef(base(initialValue, maxHistory))
-}
-
-let createRef = base
-export { ref, createRef }
+export const ref = base
