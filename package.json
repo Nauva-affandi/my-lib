@@ -1,6 +1,6 @@
 {
   "name": "nofandi-mini",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "lib sederhana dan mini",
   "main": "main.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/Nauva-affandi/my-lib.git"
   },
   "type": "module",
-  "keywords": [],
+  "keywords": ["pantek"],
   "author": "Nauva affandi",
   "license": "MIT",
   "bugs": {
